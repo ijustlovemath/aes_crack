@@ -44,13 +44,13 @@ fn main() {
     corrupted.push(5);
 
 
-    let WORKERS = 20;
+    let WORKERS = 200;
     let (soln_tx, soln_rx) = channel();
-    let mut stop_channels = Vec::new();
+  //  let mut stop_channels = Vec::new();
 
     for i in 0..WORKERS {
 
-        let (stop_tx, stop_rx) = channel();
+//        let (stop_tx, stop_rx) = channel();
         let work = CrackContext {
             id: i,
             indices: corrupted.clone(),
@@ -60,23 +60,23 @@ fn main() {
             soln_tx: soln_tx.clone(),
         };
 
-        stop_channels.push(stop_tx);
+//        stop_channels.push(stop_tx);
 
         thread::spawn(move || {
             let mut work = work.clone();
             let mut rng = rand::thread_rng();
-            let mut last_j = 0;
 
             loop {
+                let mut last_j = 0;
                 for j in &work.indices {
                     work.partial_key[*j] = rng.gen();
                     last_j += j;
                 }
-                if last_j == 0 {
-                    if stop_rx.try_recv().is_ok() {
-                        break;
-                    }
-                }
+//                if last_j == 0 {
+//                    if stop_rx.try_recv().is_ok() {
+//                        break;
+//                    }
+//                }
                 let mut workspace = work.message.clone();
                 let key = work.partial_key.clone();
                 let cipher = Aes128::new(&key);
@@ -91,8 +91,8 @@ fn main() {
 
     }
     let (solver, solved_key) = soln_rx.recv().unwrap();
-    for stop in stop_channels {
-        stop.send(()).expect("failed to stop everyone");
-    }
+//    for stop in stop_channels {
+//        stop.send(()).expect("failed to stop everyone");
+//    }
     println!("solved by {solver}: {solved_key:#?}");
 }
