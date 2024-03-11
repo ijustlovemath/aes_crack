@@ -67,7 +67,7 @@ fn main() {
                 let cipher = Aes128::new(&key);
                 cipher.decrypt_block(&mut workspace);
                 if workspace.to_vec() == work.solution {
-                    soln_tx.send(work.partial_key.to_vec());
+                    work.soln_tx.send(work.partial_key.to_vec());
                     break;
                 }
 
