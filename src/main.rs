@@ -6,7 +6,7 @@ use rand::Rng;
 use aes::Aes128;
 use aes::cipher::{
     BlockCipher, BlockEncrypt, BlockDecrypt, KeyInit,
-    generic_array::{try_from_vec, typenum::U16, GenericArray},
+    generic_array::{typenum::U16, GenericArray},
 };
 
 
@@ -14,20 +14,20 @@ use aes::cipher::{
 #[derive(Clone)]
 struct CrackContext {
     indices: Vec<usize>,
-    partial_key: Vec<u8>,
-    message: Vec<u8>,
+    partial_key: GenericArray<u8, U16>,
+    message: GenericArray<u8, U16>,
     solution: Vec<u8>,
     soln_tx: Sender<Vec<u8>>,
   //  stop_rx: Receiver<()>,
 }
 
 fn main() {
-    let mut partial_key = GenericArray::from([54u8, 16]);
-    let key = GenericArray::from([54u8, 16]);
+    let mut partial_key = GenericArray::from([54u8; 16]);
+    let key = GenericArray::from([54u8; 16]);
     let cipher = Aes128::new(&key);
-    let mut solution = GenericArray::from([42u8, 16]);
+    let mut solution = GenericArray::from([42u8; 16]);
 
-    let mut message = GenericArray::from([42u8, 16]);
+    let mut message = GenericArray::from([42u8; 16]);
 
     cipher.encrypt_block(&mut message);
 
@@ -43,12 +43,13 @@ fn main() {
 
     let WORKERS = 20;
     let (soln_tx, soln_rx) = channel();
-    let (stop_tx, stop_rx) = channel();
+    //let (stop_tx, stop_rx) = channel();
+
     for i in 0..WORKERS {
         let work = CrackContext {
-            indices: corrupted,
-            partial_key: partial_key.to_vec(),
-            message: message.to_vec(),
+            indices: corrupted.clone(),
+            partial_key: partial_key,
+            message: message,
             solution: solution.to_vec(),
     //        stop_rx: stop_rx.clone(),
             soln_tx: soln_tx.clone(),
@@ -61,12 +62,12 @@ fn main() {
                 for j in &work.indices {
                     work.partial_key[*j] = rng.gen();
                 }
-                let mut workspace = try_from_vec(work.message.clone()).unwrap();
-                let key = try_from_vec(work.partial_key.clone()).unwrap();
-                let cipher = Aes128::new(key);
+                let mut workspace = work.message.clone();
+                let key = work.partial_key.clone();
+                let cipher = Aes128::new(&key);
                 cipher.decrypt_block(&mut workspace);
                 if workspace.to_vec() == work.solution {
-                    soln_tx.send(work.partial_key);
+                    soln_tx.send(work.partial_key.to_vec());
                     break;
                 }
 
